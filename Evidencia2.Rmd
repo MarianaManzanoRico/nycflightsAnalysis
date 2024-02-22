@@ -1,0 +1,417 @@
+---
+title: "Evidencia2"
+author: "Mariana Manzano Rico"
+date: "2023-03-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# **Introducción**
+American Airlines es una de las empresas líderes en Estados Unidos, específicamente en Nueva York. Es por ello, que en este reporte se hace un análisis con la base de datos de vuelos del 2013, así como con otras bases secundarias sobre el clima, aeropuertos, aviones, aerolíneas, entre otras, para buscar patrones, identificar oportunidades y aprovechar esta información para la creación de su ventaja competitiva. 
+
+En los siguientes renglones se hace el análisis solicitado:
+```{r setup2, include=FALSE}
+#Houskeeping
+rm(list=ls())
+
+#Librerías
+library(nycflights13)
+library(tidyverse)
+library(dplyr)
+
+```
+
+```{r, include=FALSE}
+#Visualización de Data Frames
+#view(flights)
+#view(planes)
+#view(weather)
+#view(airlines)
+#view(airports)
+```
+# **Análisis de Datos**
+#### **Información sobre vuelos**
+Primero, se desea saber de cada vuelo, la aerolínea con la que viajan, el aeropuerto de donde despegan y el aeropuerto al que llegan:
+```{r, echo=FALSE, results=TRUE}
+#Selección de variables 
+flights1<- flights%>%
+  select(carrier, origin, dest)
+
+flights1
+
+```
+Además, se necesita saber el nombre de las aerolíneas para lo cual se hace una relación con la base de Airlines, de modo que podamos conocer dicha información:
+```{r, echo=FALSE, results=TRUE}
+#Juntar con nombres de aerolíneas
+flights_airlines<- flights1%>%
+  left_join(airlines, by=join_by("carrier"))
+
+flights_airlines
+
+```
+
+Como podemos observar, *UA* hace referencia a United Air Lines Inc, *B6* a JetBlue Airways, *DL* es la empresa Delta Airlines Inc y *EV* es ExpressJet Airlines Inc. Finalmente, *AA* es nuestra empresa de estudio, American Airlines Inc.
+
+(Estas no son las únicas aerolíneas, solo son algunos ejemplos)
+
+#### **Destinos más buscados**
+Además, es necesario saber los destinos más buscados para tomar acciones correspondientes a dichos destinos.
+```{r, echo=FALSE, results=TRUE}
+#Destinos más buscados
+mas_destinos2<- flights%>%
+  select(carrier, dest)%>%
+  group_by(dest)%>%
+  count(dest, carrier, sort=TRUE)
+
+mas_destinos2_aer<- mas_destinos2%>%
+  left_join(airlines, by=join_by("carrier"))
+
+mas_destinos2_aer
+
+```
+Como podemos observar en el Data Frame anterior, algunos de los destinos más buscados son el Aeropuerto Internacional Hartsfield-Jackson en Atlanta, el Aeropuerto Internacional de Charlotte-Douglas en Carolina del Norte, el Dallas/Fort Worth International Airport en Texas, el Aeropuerto Internacional de Miami y el Aeropuerto Internacional O'Hare en Chicago, entre otros. 
+
+Estos destinos están principalmente cubiertos por Delta Airlines, US Airways, American Airlines y United Air Lines. 
+
+##### **Recomendación**
+En este punto, se recomienda crear estrategias de mayor impacto para estos destinos, como tener mayor publicidad, mayor presencia e incluso brindar promociones, puntos de viajero, etc. Se pueden crear alianzas con agencias de viajes y turismo en dichos lugares para ser parte del paquete. 
+
+Aún así, debemos hacer un análisis de las razones por las cuáles se viaja a estos destinos, pues principalmente son ciudades grandes, por lo que puede ser por mótivos de negocios. En ese caso, tal vez hacer una alianza con agencias de turismo no sería la mejor opción (puesto que los usuarios no van de viaje), pero sí con empresas que se encuentran en esas ciudades para que todos los viajes de negocios que realizacen sus empleados los hagan con American Airlines. 
+
+#### **Horarios de vuelos**
+Por otro lado, se desea saber si los vuelos son hechos en la mañana, en la tarde, en la noche o en la madrugada, para la cual se clasificaron los vuelos de la siguiente forma:
+
+De 6:00 am a 11:59 am: Mañana
+
+De 12:00 pm a 18:59 pm: Tarde
+
+De 19:00 pm a 11:59 pm: Noche
+
+De 12:00 am a 5:59 am: Madrugada
+
+```{r, echo=FALSE, results=TRUE}
+#Horario de vyelos (Mañana, tarde, noche o madrugada)
+vuelos_horario<- flights%>%
+  left_join(airlines, by=join_by("carrier"))%>%
+  select(carrier, name, dest, dep_time)%>%
+  mutate(clas_horario=
+           ifelse(dep_time>=600 & dep_time<1200, "Mañana", 
+                  ifelse(dep_time>=1200 & dep_time<1900, "Tarde",
+                         ifelse(dep_time>=1900 & dep_time<2400, "Noche", "Madrugada"))))
+  
+```
+
+Una vez clasificados los vuelos, se contó cuántos se hacen en cada horario por destino y aerolínea:
+
+```{r, echo=FALSE, results=TRUE}
+#Cantidad de vuelos en tipo de horario
+no_vuelos<-vuelos_horario%>%
+  group_by(carrier, dest)%>%
+  count(clas_horario, sort=TRUE)
+
+no_vuelos
+```
+
+Como observamos, el mayor número de vuelos que se hacen son en la tarde hacia Atlanta, con Delta Airlines. De ahí le siguen en la Mañana hacia Carolina del Norte con Us Airways y hacia Atlanta  con Delta nuevamente.
+
+Además, se desea saber cuántos vuelos de la empresa de estudio se hacen en la Madrugada, donde descubrimos que:
+
+```{r, echo=FALSE, results=TRUE}
+#Vuelos en la madrugada de AA
+madrugada_aa<- no_vuelos%>%
+  select(dest, clas_horario, carrier)%>%
+  filter(carrier=="AA", clas_horario=="Madrugada")%>%
+  group_by(dest)
+
+madrugada_aa
+
+```
+En todo el año, sólo se hicieron cuatro vuelos con American Airlines en la madrugada, a los destinos de Miami, Texas, Chicago y a Los Angeles, uno a cada destino. 
+
+##### **Recomendaciones**
+Al menos en los primeros registros del primer Data Frame, observamos que no hay vuelos de noche o de madrugada y con base en el segundo Data Frame que indica que sólo se hicieron cuatro vuelos en la madrugada, tomamos las siguientes recomendaciones: 
+
+1. Enfocarse en dar promociones, precios especiales y puntos de viajero para los vuelos en mañanas y tardes, puesto que son los que más se realizan.
+
+2. Enfocarse en esta misma estrategia pero para los vuelos de la noche y madrugada. Aparte brindar un servicio especial para los vuelos en estos horarios, de modo que se promuevan los viajes a estas horas y American Airlines sea la primera empresa que lo haga, creando así una ventaja competitiva. 
+
+#### **Aviones utilizados por American Airlines**
+Después se nos solicitó conocer el tipo de aviones que la empresa utiliza así como el número de vuelos que ha realizado con cada uno, donde encontramos la siguiente información:
+
+```{r, echo=FALSE, results=TRUE}
+#Aviones que usa aa
+aviones_aa<- flights%>%
+  left_join(planes, by=join_by("tailnum"))%>%
+   select(tailnum, carrier, type, engine, seats)%>%
+  filter(carrier=="AA")%>%
+  group_by(type, engine, seats)%>%
+  count(type, engine, seats, tailnum)%>%
+  arrange(desc(n))
+
+aviones_aa
+
+```
+El mayor número de aviones son de multi motor de ala fija tipo Turbo fan, de 255 asientos, con los cuales realizan sus vuelos comerciales. 
+Sin embargo, también observamos algunos aviones igualmente de ala fija pero con motor alternativo y 6, 8, 11 o 22 asientos, con los cuales se realizan menos viajes y son utilizados para situaciones más privadas. 
+
+##### **Recomendaciones**
+Con base en lo anterior y en vista de que el mayor número de vuelos que se realizan son comerciales, se propone a American Airlines tener su línea privada para vuelos especiales y que hagan una mejor publicidad de ello. 
+
+Esto porque, si bien podemos pensar que la mayor fuente de ingresos es a través de los vuelos comerciales, puede ser una buena estrategia de Marketing y preferencia el contar con un servicio premium, pues ya cuentan con el material principal que son los aviones. 
+
+```{r, include=FALSE}
+#THEMES
+theme1<- theme(text=element_text(size=14),
+               rect=element_blank(),
+               panel.grid=element_blank(),
+               title=element_text(color="#8b0005"),
+               axis.line=element_line(color="darkslategray"),
+               plot.title=element_text(size=20, face='bold'))
+
+theme2<- theme(text=element_text(size=14),
+               title=element_text(color="#8b0005"),
+               axis.line=element_line(color="darkslategray"),
+               plot.title=element_text(size=20, face='bold'))
+```
+# **Visualización de datos**
+Una vez hecho el análisis con datos, ahora se responderán otras preguntas por medio de gráficos y se harán recomendaciones al respecto para mejorar la posición de la aerolínea en el mercado.
+
+Primero, se hizo una gráfica de correlación para ver si el retraso en vuelos implicaba igual un retraso en la llegada, para lo cual se filtraron aquellos vuelos que tenían al menos una hora de retraso. Los resultados son los siguientes:
+```{r, echo=FALSE, results=TRUE}
+#VISUALIZACION DE DATOS
+#AA Hora de retraso tambien en hora de llegada
+aa_retraso_gr<- flights %>%
+  select(carrier, dep_delay, arr_delay)%>%
+  filter(carrier=="AA"& dep_delay >=60 & arr_delay>=60)
+
+ggplot(data=aa_retraso_gr, mapping=aes(x=dep_delay, y=arr_delay))+
+  geom_point(alpha=0.2, color="turquoise4") + 
+  labs(title="Vuelos con retraso")+
+  theme2
+
+```
+
+Como observamos, existe una gran relación entre aquellos vuelos que salen con retraso y llegan con retraso, además de que la mayoría tiene un retraso de entre 1 y 4 horas. 
+
+##### **Recomendaciones**
+Con esta información, recomendamos a la empresa que tenga un servicio preparado para aquellos vuelos que representan un retraso, como bebidas, snacks y entretenimiento en la sala de espera. Incluso se pueden dar algunos beneficios como disculpa por el retraso en sus vuelos. 
+
+#### **Temperatura los primeros días del año**
+Después se hizo el análisis de la temperatura promedio (gráfico de líneas) así como la frecuencia de esta (gráfico de barras) de cada día durante los primeros 15 días de enero en la ciudad de Nueva Jersey, donde observamos que la máxima fue de 50.7 grados Farenheit (10°C), mientras que la mínima es de 28.7 °F, lo que es equivalente a -1.8 °C y que la más común es de 39.02 °F (3.9°C).
+
+```{r, echo=FALSE, results=TRUE}
+#Tendencia de temperatura con gráfica de línea
+temperatura_enero<-weather%>%
+  select(origin, day, month, temp)%>%
+  filter(origin=="EWR" & month==1 & day>=1 & day <=15)%>%
+  group_by(day)%>%
+  summarize(prom_temp1=mean(temp))
+
+ggplot(data=temperatura_enero, mapping=aes(x=day, y=prom_temp1))+
+  geom_line(color="turquoise4")+
+  labs(title="Temperatura los primeros días del año")+
+  theme1
+
+```
+
+```{r, echo=FALSE, results=TRUE}
+#Temperatura más frecuente los primeros 15 días
+temp_frec<- weather%>%
+  select(origin, day, month, temp)%>%
+  filter(origin=="EWR" & month==1 & day>=1 & day <=15)
+
+
+ggplot(data=temp_frec, mapping=aes(x=temp))+
+  geom_histogram(fill="turquoise4", bins=30, color="white")+
+  labs(title="Frecuencia de temperatura")+
+  theme1
+  
+
+```
+
+También visualizamos la temperatura de los primeros 15 días de cada mes para ver los cambios que habían. Podemos observar que de enero a marzo son meses fríos, abril y mayo tienen una temperatura regular, de junio a octubre hay un clima más caluroso y finalmente, noviembre y diciembre empiezan a presentar temperaturas frías otra vez. 
+
+```{r, echo=FALSE, results=TRUE}
+#Con facets
+temp_frec2<- weather%>%
+  select(origin, day, month, temp)%>%
+  filter(origin=="EWR" & day>=1 & day <=15)%>%
+  group_by(month)
+
+ggplot(data=temp_frec2, mapping=aes(x=temp))+
+  geom_histogram(fill="turquoise4", bins=30, color="white")+
+  facet_wrap(.~ month, ncol=4)+
+  labs(title="Frecuencia de temperatura en el año")+
+  theme2
+
+
+```
+
+#####  **Recomendaciones**
+Como observamos, en este aeropuerto en los últimos y primeros días del año hay un clima frío, por lo cual recomendamos brindar un servicio relacionado al clima como dar cobijas, café o chocolate caliente y templar la temperatura de las salas de espera, mientras que en los días más calurosos se pueden brindar bebidas frías. Esto con el fin de mejorar la atención y servicio al cliente y ganar ventaja competitiva.
+
+#### **Las 10 aerolíneas con mayores vuelos en Nueva York**
+Para esto, se seleccionó el aeropuerto de John F. Kennedy para conocer las aerolíneas con mayor número de vuelos. Encontramos que estas son:
+
+```{r, echo=FALSE, results=TRUE}
+#Vuelos de NY por aerolínea (10+)
+ny_vuelos<-flights%>%
+  select(carrier, origin)%>%
+  filter(origin=="JFK")%>%
+  group_by(carrier)
+
+ny_vuelos2<-flights%>%
+  select(carrier, origin)%>%
+  filter(origin=="JFK")%>%
+  count(carrier, sort=TRUE)
+
+ny_vuelos_nombres<- ny_vuelos2%>%
+  left_join(airlines, by=join_by("carrier"))
+
+ny_vuelos_nombres
+
+```
+
+Después creamos un gráfico de barras para conocer la diferencia de vuelos entre cada una de ellas. 
+
+```{r, echo=FALSE, results=TRUE}
+
+barras_vuelos_aer<- ggplot(data=ny_vuelos,
+       mapping=aes(x=carrier))+
+  geom_bar(fill="darkcyan")+
+  labs(title="Aerolíneas con más vuelos de NY")+
+  theme1
+
+barras_vuelos_aer
+
+```
+
+Observamos que las que más vuelos tienen son: 
+
+-JetBlue Airways
+
+-Delta Air Lines Inc.
+
+-Endeavor Air Inc.
+
+-American Airlines Inc.
+
+También podemos visualizarlo en una gráfica de pastel para conocer cuánto del mercado abarca cada aerolínea:
+
+```{r, echo=FALSE, results=TRUE}
+
+#En gráfica de pie
+ny_vuelos_pie <- ny_vuelos %>% 
+  count(carrier) %>% 
+  ungroup(carrier) %>% 
+  mutate(pcnt = n / sum(n)) %>% 
+  arrange(pcnt) %>%
+  mutate(Aerolinea = scales::percent(pcnt))
+#(r charts, n.d.)
+
+ny_vuelos_pie
+
+ggplot(ny_vuelos_pie, aes(x = "", y = pcnt, fill = carrier)) +
+  geom_col() +
+  coord_polar(theta = "y")+
+  labs(title="Aerolíneas con más vuelos en NY")+
+  theme1
+
+```
+
+Vemos que entre JetBlue Airways y Delta Air Lines abarcan más de la mitad del mercado mientras que American Airlines abarca el 12.39%.
+
+#####  **Recomendaciones**
+Una vez que vimos que estas dos aerolíneas son las más fuertes del mercado, podemos voltear a ver sus estrategias para identificar patrones, ver qué podemos implementar en el modelo de negocios de nuestra empresa, qué podemos hacer diferente y qué podemos hacer mejor. 
+
+#### **5 Aerolíneas con más vuelos por destino**
+Por último, se buscaron las cinco aerolíneas con más vuelos por destino. Primero se encontró que las 5 aerolíneas con más vuelos fueron:
+
+-Delta Air Lines
+
+-US Airways Inc
+
+-American Airlines
+
+-United Air Lines
+
+-JetBlue Airways
+
+Mientras que los destinos más concurridos son:
+
+-ATL (Atlanta)
+
+-CLT (Carolina del Norte)
+
+-DFW (Texas)
+
+-MIA (Miami)
+
+-ORD (Chicago)
+
+Con esta información, observamos la siguiente gráfica, presentada de tres formas distintas para mejorar su visualización. 
+
+```{r, echo=FALSE, results=TRUE}
+#Airports con flights (dest y faa)
+
+#5 Aerolíneas con más vuelos
+airports_flights<- flights%>%
+  inner_join(airports, by=join_by("dest"=="faa"))
+
+#Carrier= DL, US, AA, UA, B6
+#Dest= ATL, CLT, DFW, MIA, ORD
+air_flights<- airports_flights%>%
+  filter((carrier=="DL" | carrier=="US" | carrier=="AA" | carrier=="UA" | carrier=="B6") & (dest %in% c("ATL", "CLT", "DFW", "MIA", "ORD")))
+
+#stack
+ggplot(data=air_flights,
+       mapping=aes(x=carrier, fill=dest))+
+  geom_bar()+
+  labs(title="5 Aerolíneas con más vuelos por destino")+
+  theme1
+
+#dodge
+ggplot(data=air_flights,
+       mapping=aes(x=carrier, fill=dest))+
+  geom_bar(position="dodge")+
+  labs(title="5 Aerolíneas con más vuelos por destino")+
+  theme1
+
+#Facet wrap
+ggplot(data = air_flights, mapping = aes(x = carrier, fill = dest)) +
+  geom_bar(position="dodge") +
+  facet_wrap(~ carrier, ncol = 2)+
+  labs(title="5 Aerolíneas con más vuelos por destino")+
+  theme2
+#(Modern Dive, n.d.)
+```
+
+#####  **Recomendaciones finales**
+Con este último punto, recomendamos implementar las dos estrategias mencionadas con anterioridad: dar promociones, puntos de viajero y precios especiales para estos cinco destinos y mejorar el servicio al cliente dependiendo de todo este análisis de datos para crear ventaja competitiva ante la competencia.
+
+# **Ética en el uso de datos**
+Primero, es necesario mencionar que la ética y privacidad de los datos son temas que cada vez ganan mayor importancia en el mundo, por lo cual, empresas y gobiernos han cambiado sus políticas para asegurar el uso de datos, el consentimiento del cliente y mantener así su confianza. (Marimón, 2022).
+
+La ética de los datos es una rama de la ética que evalúa si puede afectar o no negativamente a personas o a la sociedad la recopilación, creación, análisis y envío de datos, tanto estructurados como no estructurados. (Cognizant, n.d.). 
+
+Por otro lado, la integridad de datos hace referencia a la exactitud y fiabilidad de los datos que son proporcionados para su posterior análisis, pues deben ser confiables y exactos para que las recomendaciones dadas sean precisas. (Tecnologías Información, n.d.). 
+
+Con esto en mente, es importante mantener la confianza de los clientes lal aplicar principios como imparcialidad, privacidad, transparencia y responsabilidad dentro de las empresas, pues esto repercute de manera positiva en la fidelidad de los clientes y en la reputación de la marca. Por otro lado, se deben realizar prácticas justas y legales al cumplir con las normas de privacidad como el Reglamento General de Protección de Datos, la Ley Orgánica de Protección de Datos. (Marimón, 2022).
+
+En lo personal, considero que es de suma importancia mantener estas prácticas, tanto éticas como legales, en el momento que consultamos bases de datos y las analizamos. Sin embargo, es de suma relevancia igualmente aprender y reflexionar sobre estos temas, pues como futuros profesionistas seguramente nos encontraremos con más datos personales, los cuales deben ser tratados con mucho mayor cuidado para no caer en prácticas que atenten contra la justicia y privacidad. Estos no deben ser divulgados, vendidos o comprados a menos que estemos seguros que los clientes hayan dado su consentimiento para hacerlo. 
+
+# **Conclusiones**
+Después de haber realizado el análisis para la empresa American Airlines, concluimos que en este punto, lo mejor es enfocarse en el cliente y seguir las recomendaciones brindadas a lo largo del proyecto, pues cada una se dio basándonos en los datos que se nos presentaban y están enfocadas en el servicio y atención al cliente, buscando así tener una mayor ventaja competitiva frente a la competencia. 
+
+# **Bibliografía**
+-r charts. (n.d.). Diagrama de sectores con porcentajes en ggplot2. https://r-charts.com/es/parte-todo/diagrama-sectores-porcentajes-ggplot2/
+
+-Modern Dive. (n.d.). Data Visualization via ggplot2. https://moderndive.github.io/moderndive_labs/static/previous_versions/v0.4.0/3-viz.html#histograms
+
+-Cognizant. (n.d.). Etica de los datos. https://www.cognizant.com/es/es/glossary/data-ethics#:~:text=La%20%C3%A9tica%20de%20los%20datos%20es%20la%20rama%20de%20la,las%20personas%20y%20la%20sociedad.
+
+-Tecnologías Información. (n.d.). Integridad de Datos. https://www.tecnologias-informacion.com/integridaddatos.html
+
+-Marimón, F. (2022). Ética en los datos: ¿Más que confianza? https://www.linkedin.com/pulse/%C3%A9tica-en-los-datos-m%C3%A1s-que-confianza-falconeris-marim%C3%B3n-caneda/?trk=pulse-article_more-articles_related-content-card&originalSubdomain=es
